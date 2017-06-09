@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
 
     val networks = api.getDhcpData().dhcpNetworks
     networks.forEach {
-        println("${it.name}: ${it.subnet}")
+        println("${it.name}: ${it.subnet}, DHCP ${it.range.start} - ${it.range.end}")
         it.leases.forEach {
             println("   ${if (it.hostname.isEmpty()) "<unknown>" else it.hostname}: ${it.ip}, ${it.mac}, ${if (it.static) "static" else "until ${it.expiration}"}")
         }

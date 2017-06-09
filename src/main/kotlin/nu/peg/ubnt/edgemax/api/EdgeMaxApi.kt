@@ -13,7 +13,6 @@ import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.CloseableHttpClient
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.logging.Logger
 
 class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredentials) {
     companion object {
@@ -27,9 +26,6 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
     }
 
     private fun login() {
-        val logger = Logger.getLogger(javaClass.simpleName)
-
-        logger.info("Authenticating")
         val post = HttpPost(baseUrl).withFormParams(
                 "username" to credentials.username,
                 "password" to credentials.password
@@ -40,7 +36,6 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         if (response.statusLine.statusCode != HttpStatus.SC_MOVED_TEMPORARILY) {
             throw InvalidCredentialsException()
         }
-        logger.info("Authenticated successfully")
     }
 
     fun getDhcpData(): DhcpData {
