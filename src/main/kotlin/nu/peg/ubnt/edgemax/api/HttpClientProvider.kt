@@ -16,11 +16,11 @@ object HttpClientProvider {
         return@lazy socketFactory
     }
 
-    val cookieStore = BasicCookieStore()
+    private fun createCookieStore() = BasicCookieStore()
 
     fun createClient(): CloseableHttpClient = HttpClients.custom()
             .useSystemProperties()
             .setSSLSocketFactory(sslSocketFactory)
-            .setDefaultCookieStore(cookieStore)
+            .setDefaultCookieStore(createCookieStore())
             .build()
 }
