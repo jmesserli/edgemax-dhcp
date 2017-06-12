@@ -6,14 +6,27 @@ buildscript {
 
     repositories {
         maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.1' }
+        maven { url 'https://pkg.pegnu.cloud/repository/m2' }
         mavenCentral()
     }
     dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
-apply plugin: 'kotlin'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+shadowJar {
+    baseName = 'edge-dhcp'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'nu.peg.ubnt.edgemax.AppKt'
+    }
+}
 
 repositories {
     maven { url 'https://pkg.pegnu.cloud/repository/m2' }
