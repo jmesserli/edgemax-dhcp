@@ -5,6 +5,7 @@ import nu.peg.ubnt.edgemax.api.model.DhcpData
 import nu.peg.ubnt.edgemax.api.model.DhcpLease
 import nu.peg.ubnt.edgemax.api.model.DhcpNetwork
 import nu.peg.ubnt.edgemax.api.model.IPRange
+import nu.peg.ubnt.edgemax.util.orIf
 import nu.peg.ubnt.edgemax.util.withFormParams
 import nu.peg.ubnt.edgemax.util.withReferer
 import org.apache.http.HttpStatus
@@ -121,7 +122,7 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
                 .map {
                     val value = it.value
                     value.string("pool")!! to DhcpLease(
-                            value.string("client-hostname")!!,
+                            value.string("client-hostname")!!.orIf({ it.isEmpty() }, "<unknown>"),
                             it.key,
                             value.string("mac")!!,
                             parseExpiration(value.string("expiration")!!)
