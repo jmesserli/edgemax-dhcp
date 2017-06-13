@@ -13,6 +13,8 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.CloseableHttpClient
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredentials) {
@@ -61,8 +63,10 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         return DhcpData(extractDhcpNetworksAndMerge(dhcpInitialDataJson, poolGroupedLeases))
     }
 
-    private fun parseExpiration(timeString: String) =
-            LocalDateTime.parse(timeString, expirationFormatter)
+    private fun parseExpiration(timeString: String): LocalDateTime? {
+        val zoneFormatter = expirationFormatter.withZone(ZoneId.of("UTC+0"))
+        return ZonedDateTime.parse(timeString, zoneFormatter).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+    }
 
     private fun getDhcpInitialData(): JsonObject? {
         val get = HttpGet("$baseUrl/api/edge/get.json").withReferer(baseUrl)
