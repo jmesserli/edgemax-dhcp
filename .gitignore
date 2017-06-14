@@ -3,4 +3,4 @@
 build/
 gradle/
 out/
-src/main/resources/secrets.properties
+secrets.properties

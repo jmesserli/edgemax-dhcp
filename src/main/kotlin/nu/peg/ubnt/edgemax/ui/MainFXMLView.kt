@@ -9,14 +9,20 @@ import nu.peg.ubnt.edgemax.api.EdgeMaxApi
 import nu.peg.ubnt.edgemax.api.EdgeMaxCredentials
 import nu.peg.ubnt.edgemax.api.model.DhcpLease
 import nu.peg.ubnt.edgemax.api.model.DhcpNetwork
-import nu.peg.ubnt.edgemax.util.KotlinResourceUtil
 import tornadofx.*
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 class MainFXMLView : View() {
+    companion object {
+        private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+    }
+
     private val api: EdgeMaxApi by lazy {
         val properties = Properties()
-        properties.load(KotlinResourceUtil.getResourceStream("secrets.properties"))
+        properties.load(Files.newInputStream(Paths.get("secrets.properties")))
 
         val credentials = EdgeMaxCredentials(properties.getProperty("username"), properties.getProperty("password"))
         EdgeMaxApi(properties.getProperty("baseUrl"), credentials)
@@ -99,7 +105,7 @@ class MainFXMLView : View() {
                 "Hostname: ${lease.hostname}",
                 "IP: ${lease.ip}",
                 "MAC: ${lease.mac}",
-                "${if (lease.static) "Static" else "Expiration: ${lease.expiration}"}"
+                "${if (lease.static) "Static" else "Expiration: ${lease.expiration!!.format(timeFormatter)}"}"
         ).observable()
     }
 }
