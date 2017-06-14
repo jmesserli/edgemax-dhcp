@@ -2,10 +2,7 @@ package nu.peg.ubnt.edgemax.ui
 
 import javafx.event.EventHandler
 import javafx.scene.chart.PieChart
-import javafx.scene.control.ListView
-import javafx.scene.control.ProgressIndicator
-import javafx.scene.control.TreeItem
-import javafx.scene.control.TreeView
+import javafx.scene.control.*
 import javafx.scene.layout.Pane
 import javafx.util.Duration.millis
 import nu.peg.ubnt.edgemax.api.EdgeMaxApi
@@ -30,6 +27,7 @@ class MainFXMLView : View() {
     val networkTree by fxid<TreeView<Any?>>()
     val progress by fxid<ProgressIndicator>()
     val propertyList by fxid<ListView<String>>("properties")
+    val statsPiePane by fxid<TitledPane>()
     val statsPie by fxid<PieChart>()
 
     init {
@@ -81,9 +79,22 @@ class MainFXMLView : View() {
                 "DNS Servers: ${network.dnsServers.joinToString(", ")}",
                 "Lease Time: ${network.leaseTime} s"
         ).observable()
+
+        statsPiePane.isDisable = false
+        statsPiePane.isExpanded = true
+
+        val leased = network.stats.leased
+        val available = network.stats.available
+        statsPie.data = listOf(
+                PieChart.Data("Leased ($leased)", leased.toDouble()),
+                PieChart.Data("Available ($available)", available.toDouble())
+        ).observable()
     }
 
     private fun updateForLease(lease: DhcpLease) {
+        statsPiePane.isDisable = true
+        statsPiePane.isExpanded = false
+
         propertyList.items = listOf(
                 "Hostname: ${lease.hostname}",
                 "IP: ${lease.ip}",
