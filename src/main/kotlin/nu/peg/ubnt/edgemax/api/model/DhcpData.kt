@@ -13,7 +13,8 @@ data class DhcpNetwork(
         val leaseTime: Int,
         val dnsServers: List<String>,
         val range: IPRange,
-        val leases: List<DhcpLease>
+        val leases: List<DhcpLease>,
+        val stats: DhcpStatistics
 )
 
 data class IPRange(
@@ -32,3 +33,9 @@ data class DhcpLease(
             return expiration == null
         }
 }
+
+data class DhcpStatistics(
+        val poolSize: Int,
+        val leased: Int,
+        val available: Int
+)

@@ -1,10 +1,7 @@
 package nu.peg.ubnt.edgemax.api
 
 import com.beust.klaxon.*
-import nu.peg.ubnt.edgemax.api.model.DhcpData
-import nu.peg.ubnt.edgemax.api.model.DhcpLease
-import nu.peg.ubnt.edgemax.api.model.DhcpNetwork
-import nu.peg.ubnt.edgemax.api.model.IPRange
+import nu.peg.ubnt.edgemax.api.model.*
 import nu.peg.ubnt.edgemax.util.orIf
 import nu.peg.ubnt.edgemax.util.withFormParams
 import nu.peg.ubnt.edgemax.util.withReferer
@@ -48,6 +45,9 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         val dhcpInitialDataJson = getDhcpInitialData() ?: throw EdgeMaxApiException("Could not load dhcp initial data")
         val poolGroupedStaticLeases = extractDhcpLeasesFromStaticMappings(dhcpInitialDataJson)
 
+        val dhcpStatsJson = getDhcpStats() ?: throw EdgeMaxApiException("Couldn't load dhcp stats data")
+        val dhcpStatsMap = extractDhcpStatsFromJson(dhcpStatsJson)
+
         val poolGroupedLeases = mutableMapOf<String, List<DhcpLease>>()
         poolGroupedLeases.putAll(poolGroupedDynamicLeases)
         poolGroupedStaticLeases.entries.forEach {
@@ -60,7 +60,24 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
             })
         }
 
-        return DhcpData(extractDhcpNetworksAndMerge(dhcpInitialDataJson, poolGroupedLeases))
+        return DhcpData(extractDhcpNetworksAndMerge(dhcpInitialDataJson, poolGroupedLeases, dhcpStatsMap))
+    }
+
+    private fun extractDhcpNetworksAndMerge(dhcpInitialDataJson: JsonObject, leases: Map<String, List<DhcpLease>>, stats: Map<String, DhcpStatistics>): List<DhcpNetwork> {
+        return dhcpInitialDataJson.entries.map { it as MutableMap.MutableEntry<String, JsonObject> }
+                .map {
+                    val subnetObj = (it.value.obj("subnet")?.entries?.first()!! as MutableMap.MutableEntry<String, JsonObject>)
+                    val gateway = subnetObj.value.string("default-router")!!
+                    val leaseTime = subnetObj.value.string("lease")!!.toInt()
+                    val dnsServers = subnetObj.value.array<String>("dns-server")!!.value
+
+                    val rangeStartEntry = subnetObj.value.obj("start")?.entries?.first()!! as MutableMap.MutableEntry<String, JsonObject>
+                    val rangeStop = rangeStartEntry.value.string("stop")!!
+
+                    val ipRange = IPRange(rangeStartEntry.key, rangeStop)
+
+                    DhcpNetwork(it.key, subnetObj.key, gateway, leaseTime, dnsServers, ipRange, leases[it.key]!!, stats[it.key]!!)
+                }
     }
 
     private fun parseExpiration(timeString: String): LocalDateTime? {
@@ -74,23 +91,6 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         val responseObject = Parser().parse(response.entity.content) as? JsonObject
 
         return responseObject?.obj("GET")?.obj("service")?.obj("dhcp-server")?.obj("shared-network-name")
-    }
-
-    private fun extractDhcpNetworksAndMerge(dhcpInitialDataJson: JsonObject, leases: Map<String, List<DhcpLease>>): List<DhcpNetwork> {
-        return dhcpInitialDataJson.entries.map { it as MutableMap.MutableEntry<String, JsonObject> }
-                .map {
-                    val subnetObj = (it.value.obj("subnet")?.entries?.first()!! as MutableMap.MutableEntry<String, JsonObject>)
-                    val gateway = subnetObj.value.string("default-router")!!
-                    val leaseTime = subnetObj.value.string("lease")!!.toInt()
-                    val dnsServers = subnetObj.value.array<String>("dns-server")!!.value
-
-                    val rangeStartEntry = subnetObj.value.obj("start")?.entries?.first()!! as MutableMap.MutableEntry<String, JsonObject>
-                    val rangeStop = rangeStartEntry.value.string("stop")!!
-
-                    val ipRange = IPRange(rangeStartEntry.key, rangeStop)
-
-                    DhcpNetwork(it.key, subnetObj.key, gateway, leaseTime, dnsServers, ipRange, leases[it.key]!!)
-                }
     }
 
     private fun extractDhcpLeasesFromStaticMappings(staticMappingsJson: JsonObject): Map<String, List<DhcpLease>> {
@@ -107,7 +107,6 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
                             .map { lease -> it.first to lease }
                 }.groupBy({ it.first }, { it.second })
     }
-
 
     private fun getDynamicLeases(): JsonObject? {
         val get = HttpGet("$baseUrl/api/edge/data.json?data=dhcp_leases").withReferer(baseUrl)
@@ -132,6 +131,25 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
                             parseExpiration(value.string("expiration")!!)
                     )
                 }.groupBy({ it.first }, { it.second })
+    }
+
+    private fun getDhcpStats(): JsonObject? {
+        val get = HttpGet("$baseUrl/api/edge/data.json?data=dhcp_stats").withReferer(baseUrl)
+        val response = httpClient.execute(get)
+        val responseObject = Parser().parse(response.entity.content) as? JsonObject
+
+        return responseObject?.obj("output")?.obj("dhcp-server-stats")
+    }
+
+    private fun extractDhcpStatsFromJson(dhcpStats: JsonObject): Map<String, DhcpStatistics> {
+        val pairs = dhcpStats.entries.map {
+            val dhcpNetwork = it.key
+            val statObject = (it.value as JsonObject)
+
+            dhcpNetwork to DhcpStatistics(statObject.string("pool_size")!!.toInt(), statObject.string("leased")!!.toInt(), statObject.string("available")!!.toInt())
+        }
+
+        return mapOf(*pairs.toTypedArray())
     }
 }
 

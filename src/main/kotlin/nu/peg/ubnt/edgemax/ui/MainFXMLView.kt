@@ -1,6 +1,7 @@
 package nu.peg.ubnt.edgemax.ui
 
 import javafx.event.EventHandler
+import javafx.scene.chart.PieChart
 import javafx.scene.control.ListView
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.control.TreeItem
@@ -29,6 +30,7 @@ class MainFXMLView : View() {
     val networkTree by fxid<TreeView<Any?>>()
     val progress by fxid<ProgressIndicator>()
     val propertyList by fxid<ListView<String>>("properties")
+    val statsPie by fxid<PieChart>()
 
     init {
         networkTree.root = TreeItem("DHCP Networks")
