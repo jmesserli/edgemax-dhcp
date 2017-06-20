@@ -10,7 +10,7 @@ import javax.swing.JOptionPane
 fun main(args: Array<String>) {
     val secretsPath = Paths.get("secrets.properties")
     if (!Files.exists(secretsPath)) {
-        val templateStream = KotlinResourceUtil.getResourcePath("secrets.properties.template")
+        val templateStream = KotlinResourceUtil.getResourceStream("secrets.properties.template")
         Files.copy(templateStream, secretsPath)
 
         JOptionPane.showMessageDialog(null, "A secrets.properties file has been created in the current directory. Please fill it with the needed data")

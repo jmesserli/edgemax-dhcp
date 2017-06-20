@@ -1,0 +1,3 @@
+.progress-indicator:indeterminate {
+    -fx-progress-color: orangered;
+}

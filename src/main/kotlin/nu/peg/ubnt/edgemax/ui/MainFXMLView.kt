@@ -3,6 +3,7 @@ package nu.peg.ubnt.edgemax.ui
 import javafx.event.EventHandler
 import javafx.scene.chart.PieChart
 import javafx.scene.control.*
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
 import javafx.util.Duration.millis
 import nu.peg.ubnt.edgemax.api.EdgeMaxApi
@@ -35,8 +36,13 @@ class MainFXMLView : View() {
     val propertyList by fxid<ListView<String>>("properties")
     val statsPiePane by fxid<TitledPane>()
     val statsPie by fxid<PieChart>()
+    val reload by fxid<Button>()
 
     init {
+        reload.onMouseClicked = EventHandler<MouseEvent> {
+            reloadData()
+        }
+
         networkTree.root = TreeItem("DHCP Networks")
         networkTree.root.isExpanded = true
         networkTree.cellFormat {
@@ -50,12 +56,22 @@ class MainFXMLView : View() {
         }
 
         networkTree.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
+            if (newValue == null) return@addListener
+
             val value = newValue.value
             when (value) {
                 is DhcpNetwork -> updateForNetwork(value)
                 is DhcpLease -> updateForLease(value)
             }
         }
+
+        reloadData()
+    }
+
+    private fun reloadData() {
+        reload.isDisable = true
+        progress.show()
+        progress.fade(millis(200.0), 1.0)
 
         runAsync {
             api.getDhcpData()
@@ -73,6 +89,7 @@ class MainFXMLView : View() {
             }
 
             progress.fade(millis(500.0), 0.0).onFinished = EventHandler { progress.hide() }
+            reload.isDisable = false
         }
     }
 
