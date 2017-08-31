@@ -5,7 +5,6 @@ import nu.peg.ubnt.edgemax.api.model.*
 import nu.peg.ubnt.edgemax.util.orIf
 import nu.peg.ubnt.edgemax.util.withFormParams
 import nu.peg.ubnt.edgemax.util.withReferer
-import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.CloseableHttpClient
@@ -17,6 +16,7 @@ import java.time.format.DateTimeFormatter
 class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredentials) {
     companion object {
         private val expirationFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
+        private val invalidLoginString = "The username or password you entered is incorrect"
     }
 
     private val httpClient: CloseableHttpClient = HttpClientProvider.createClient()
@@ -32,8 +32,8 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         )
 
         val response = httpClient.execute(post)
-        // Returns a 200 if the login is invalid and 302 Found if the login was successful
-        if (response.statusLine.statusCode != HttpStatus.SC_MOVED_TEMPORARILY) {
+        val reader = response.entity.content.reader()
+        if (reader.readText().contains(invalidLoginString)) {
             throw InvalidCredentialsException()
         }
     }
