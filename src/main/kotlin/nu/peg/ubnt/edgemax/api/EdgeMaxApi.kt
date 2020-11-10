@@ -1,6 +1,7 @@
 package nu.peg.ubnt.edgemax.api
 
-import com.beust.klaxon.*
+import com.beust.klaxon.JsonObject
+import com.beust.klaxon.Parser
 import nu.peg.ubnt.edgemax.api.model.*
 import nu.peg.ubnt.edgemax.util.orIf
 import nu.peg.ubnt.edgemax.util.withFormParams
@@ -51,13 +52,13 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         val poolGroupedLeases = mutableMapOf<String, List<DhcpLease>>()
         poolGroupedLeases.putAll(poolGroupedDynamicLeases)
         poolGroupedStaticLeases.entries.forEach {
-            poolGroupedLeases.merge(it.key, it.value, { existingList, newList ->
+            poolGroupedLeases.merge(it.key, it.value) { existingList, newList ->
                 val leaseList = mutableListOf<DhcpLease>()
                 leaseList.addAll(existingList)
                 leaseList.addAll(newList)
 
                 return@merge leaseList
-            })
+            }
         }
 
         return DhcpData(extractDhcpNetworksAndMerge(dhcpInitialDataJson, poolGroupedLeases, dhcpStatsMap))
