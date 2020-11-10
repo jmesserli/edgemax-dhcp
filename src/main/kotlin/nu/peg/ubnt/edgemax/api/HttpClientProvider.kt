@@ -6,14 +6,12 @@ import org.apache.http.impl.client.BasicCookieStore
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.ssl.SSLContexts
-import javax.net.ssl.HostnameVerifier
 
 object HttpClientProvider {
     /** TODO Ignores SSL errors: yes, this is very unsafe */
     private val sslSocketFactory: SSLConnectionSocketFactory by lazy {
         val sslContext = SSLContexts.custom().loadTrustMaterial(null, TrustSelfSignedStrategy.INSTANCE).build()
-        val socketFactory = SSLConnectionSocketFactory(sslContext, HostnameVerifier { _, _ -> true })
-        return@lazy socketFactory
+        SSLConnectionSocketFactory(sslContext) { _, _ -> true }
     }
 
     private fun createCookieStore() = BasicCookieStore()

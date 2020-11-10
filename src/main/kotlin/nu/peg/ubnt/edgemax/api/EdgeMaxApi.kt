@@ -14,10 +14,10 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredentials) {
+class EdgeMaxApi(private val baseUrl: String, private val credentials: EdgeMaxCredentials) {
     companion object {
         private val expirationFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")
-        private val invalidLoginString = "The username or password you entered is incorrect"
+        private const val invalidLoginString = "The username or password you entered is incorrect"
     }
 
     private val httpClient: CloseableHttpClient = HttpClientProvider.createClient()
@@ -77,7 +77,7 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
 
                     val ipRange = IPRange(rangeStartEntry.key, rangeStop)
 
-                    DhcpNetwork(it.key, subnetObj.key, gateway, leaseTime, dnsServers, ipRange, leases[it.key]!!, stats[it.key]!!)
+                    DhcpNetwork(it.key, subnetObj.key, gateway, leaseTime, dnsServers, ipRange, leases[it.key].orEmpty(), stats[it.key]!!)
                 }
     }
 
@@ -94,15 +94,15 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
         return responseObject?.obj("GET")?.obj("service")?.obj("dhcp-server")?.obj("shared-network-name")
     }
 
-    private fun extractDhcpLeasesFromStaticMappings(staticMappingsJson: JsonObject): Map<String, List<DhcpLease>> {
-        fun getStaticMappings(outerJson: JsonObject): JsonObject {
-            return (outerJson.obj("subnet")?.entries?.first()?.value as JsonObject?)?.obj("static-mapping")!!
+    private fun extractDhcpLeasesFromStaticMappings(sharedNetworkJson: JsonObject): Map<String, List<DhcpLease>> {
+        fun getStaticMappings(outerJson: JsonObject): JsonObject? {
+            return (outerJson.obj("subnet")?.entries?.first()?.value as JsonObject?)?.obj("static-mapping")
         }
 
-        return staticMappingsJson.entries
+        return sharedNetworkJson.entries
                 .map { it.key to getStaticMappings(it.value as JsonObject) }
                 .flatMap {
-                    it.second.entries
+                    it.second.orEmpty().entries
                             .map { it as MutableMap.MutableEntry<String, JsonObject> }
                             .map { DhcpLease(it.key, it.value.string("ip-address")!!, it.value.string("mac-address")!!, null) }
                             .map { lease -> it.first to lease }
@@ -112,7 +112,7 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
     private fun getDynamicLeases(): JsonObject? {
         val get = HttpGet("$baseUrl/api/edge/data.json?data=dhcp_leases").withReferer(baseUrl)
         val response = httpClient.execute(get)
-        val responseObject = Parser().parse(response.entity.content) as? JsonObject
+        val responseObject = Parser.default().parse(response.entity.content) as? JsonObject
 
         return responseObject?.obj("output")?.obj("dhcp-server-leases")
     }
@@ -137,7 +137,7 @@ class EdgeMaxApi(val baseUrl: String, private val credentials: EdgeMaxCredential
     private fun getDhcpStats(): JsonObject? {
         val get = HttpGet("$baseUrl/api/edge/data.json?data=dhcp_stats").withReferer(baseUrl)
         val response = httpClient.execute(get)
-        val responseObject = Parser().parse(response.entity.content) as? JsonObject
+        val responseObject = Parser.default().parse(response.entity.content) as? JsonObject
 
         return responseObject?.obj("output")?.obj("dhcp-server-stats")
     }
